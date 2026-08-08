@@ -9,6 +9,7 @@ import yt_dlp
 from config.settings import settings
 from services.ffmpeg_service import ffmpeg_service
 from services.deno_installer import get_deno_path, DENO_DIR, DENO_BINARY
+from services.cobalt_service import cobalt_service
 from utils.logger import logger
 from utils.helpers import cleanup_file
 
@@ -118,7 +119,52 @@ class YtDownloader:
     ) -> DownloadResult:
         """
         Extracts info and downloads video from URL in original high quality with automatic multi-tier fallbacks.
+        Tier 0: Cobalt API Engine (https://github.com/imputnet/cobalt/tree/main/api)
+        Tier 1-4: Native yt-dlp + POT Server + Cookies
         """
+        task_id = str(uuid.uuid4())[:8]
+
+        # Tier 0: Cobalt API Engine
+        try:
+            logger.info(f"Attempting download with Tier 0 (Cobalt API Engine)...")
+            cobalt_res = await cobalt_service.download_video(url, progress_callback)
+            file_path = cobalt_res["file_path"]
+
+            # Faststart remux
+            faststart_path = self.download_dir / f"{task_id}_faststart.mp4"
+            remux_ok = await ffmpeg_service.faststart_remux(file_path, str(faststart_path))
+            final_video_path = str(faststart_path) if remux_ok and faststart_path.exists() else file_path
+            if remux_ok and faststart_path.exists():
+                cleanup_file(file_path)
+
+            # Metadata extraction
+            meta = await ffmpeg_service.get_video_metadata(final_video_path)
+            duration = meta.get("duration") or 0
+            width = meta.get("width")
+            height = meta.get("height")
+            title = cobalt_res.get("original_filename") or "Downloaded Media"
+
+            # Generate thumbnail
+            thumb_path = self.download_dir / f"{task_id}_thumb.jpg"
+            gen_ok = await ffmpeg_service.generate_thumbnail(final_video_path, str(thumb_path))
+            final_thumb = str(thumb_path) if gen_ok else None
+
+            file_size = Path(final_video_path).stat().st_size
+
+            return DownloadResult(
+                file_path=final_video_path,
+                title=title,
+                uploader="Cobalt API",
+                platform="Cobalt",
+                duration=duration,
+                width=width,
+                height=height,
+                thumbnail_path=final_thumb,
+                file_size_bytes=file_size,
+                original_url=url
+            )
+        except Exception as e:
+            logger.warning(f"Tier 0 (Cobalt API Engine) skipped/failed: {e}. Falling back to yt-dlp tiers...")
         task_id = str(uuid.uuid4())[:8]
         raw_output_tmpl = str(self.download_dir / f"{task_id}_%(id)s.%(ext)s")
 

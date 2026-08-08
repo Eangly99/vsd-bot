@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     cookies_file: str = Field(default="cookies.txt", description="Path to cookies.txt file for YouTube auth bypass")
     youtube_oauth2: bool = Field(default=False, description="Enable YouTube OAuth2 device code login")
     youtube_proxy: str = Field(default="", description="Optional HTTP/SOCKS5 proxy for YouTube downloads")
+    cobalt_api_url: str = Field(default="", description="Optional custom Cobalt API instance URL (e.g. http://localhost:9000)")
+    cobalt_api_key: str = Field(default="", description="Optional API Key for authenticated Cobalt API instances")
 
     model_config = SettingsConfigDict(
         env_file=".env",
