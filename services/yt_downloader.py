@@ -34,10 +34,15 @@ class YtDownloader:
         self,
         output_template: str,
         use_cookies: bool = True,
+        player_clients: Optional[list] = None,
         progress_hook: Optional[Callable] = None
     ) -> Dict[str, Any]:
         ffmpeg_bin = ffmpeg_service.get_ffmpeg_path()
         ffmpeg_dir = str(Path(ffmpeg_bin).parent)
+
+        if player_clients is None:
+            # Optimal default clients for cloud/datacenter IPs
+            player_clients = ["tv_embedded", "android_vr", "android", "ios", "mweb"]
 
         opts: Dict[str, Any] = {
             "outtmpl": output_template,
@@ -52,7 +57,7 @@ class YtDownloader:
             "concurrent_fragment_downloads": 5,
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["android", "ios", "mweb"]
+                    "player_client": player_clients
                 }
             },
             "postprocessors": [
@@ -100,28 +105,52 @@ class YtDownloader:
                 loop.call_soon_threadsafe(progress_callback, percent, speed)
 
         def _exec_download():
-            # Tier 1: Try with cookies (if available) + mobile player client signatures
-            opts_tier1 = self._get_ydl_opts(
-                raw_output_tmpl,
-                use_cookies=True,
-                progress_hook=_progress_hook
-            )
-            try:
-                with yt_dlp.YoutubeDL(opts_tier1) as ydl:
-                    info = ydl.extract_info(url, download=True)
-                    return ydl.sanitize_info(info)
-            except Exception as e:
-                err_msg = str(e)
-                logger.warning(f"Tier 1 download failed ({err_msg}). Retrying with Tier 2 (No-Cookies Mobile Client Fallback)...")
-                # Tier 2: Retry WITHOUT cookies using mobile player clients (bypasses invalid/flagged cookies)
-                opts_tier2 = self._get_ydl_opts(
+            # Define fallback execution tiers tailored for datacenter & cloud hosting environments
+            tiers = [
+                {
+                    "name": "Tier 1 (Cookies + Multi-Client [tv_embedded, android_vr, android, ios, mweb])",
+                    "use_cookies": True,
+                    "player_clients": ["tv_embedded", "android_vr", "android", "ios", "mweb"]
+                },
+                {
+                    "name": "Tier 2 (No Cookies + Multi-Client [tv_embedded, android_vr, android, ios, mweb])",
+                    "use_cookies": False,
+                    "player_clients": ["tv_embedded", "android_vr", "android", "ios", "mweb"]
+                },
+                {
+                    "name": "Tier 3 (No Cookies + Embedded/VR Specialized [tv_embedded, android_vr])",
+                    "use_cookies": False,
+                    "player_clients": ["tv_embedded", "android_vr"]
+                },
+                {
+                    "name": "Tier 4 (No Cookies + Standard Default yt-dlp Extractor)",
+                    "use_cookies": False,
+                    "player_clients": None
+                }
+            ]
+
+            last_exception = None
+
+            for tier in tiers:
+                logger.info(f"Attempting download with {tier['name']}...")
+                opts = self._get_ydl_opts(
                     raw_output_tmpl,
-                    use_cookies=False,
+                    use_cookies=tier["use_cookies"],
+                    player_clients=tier["player_clients"],
                     progress_hook=_progress_hook
                 )
-                with yt_dlp.YoutubeDL(opts_tier2) as ydl:
-                    info = ydl.extract_info(url, download=True)
-                    return ydl.sanitize_info(info)
+                try:
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                        return ydl.sanitize_info(info)
+                except Exception as e:
+                    last_exception = e
+                    err_msg = str(e)
+                    logger.warning(f"{tier['name']} failed ({err_msg}). Trying next fallback tier...")
+
+            if last_exception:
+                raise last_exception
+            raise RuntimeError("Download failed across all fallback tiers.")
 
         logger.info(f"Starting download for URL: {url}")
         info_dict = await asyncio.to_thread(_exec_download)
