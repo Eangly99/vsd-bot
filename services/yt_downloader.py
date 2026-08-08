@@ -33,7 +33,7 @@ class YtDownloader:
     def _get_ydl_opts(
         self,
         output_template: str,
-        format_spec: Optional[str] = None,
+        use_cookies: bool = True,
         progress_hook: Optional[Callable] = None
     ) -> Dict[str, Any]:
         ffmpeg_bin = ffmpeg_service.get_ffmpeg_path()
@@ -50,6 +50,11 @@ class YtDownloader:
             "writesubtitles": False,
             "writethumbnail": True,
             "concurrent_fragment_downloads": 5,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "mweb", "ios", "web"]
+                }
+            },
             "postprocessors": [
                 {
                     "key": "FFmpegVideoConvertor",
@@ -58,18 +63,15 @@ class YtDownloader:
             ]
         }
 
-        # If a specific format string is requested, set it; otherwise yt-dlp uses its native best solver
-        if format_spec:
-            opts["format"] = format_spec
-
-        # Check for cookies file to bypass bot verification on datacenter IPs
-        cookies_path = Path(settings.cookies_file)
-        if cookies_path.exists() and cookies_path.stat().st_size > 0:
-            logger.info(f"Loaded YouTube cookies from: {cookies_path.name}")
-            opts["cookiefile"] = str(cookies_path.resolve())
-        elif Path("cookies.txt").exists() and Path("cookies.txt").stat().st_size > 0:
-            logger.info("Loaded YouTube cookies from: cookies.txt")
-            opts["cookiefile"] = str(Path("cookies.txt").resolve())
+        # Check for cookies file if requested
+        if use_cookies:
+            cookies_path = Path(settings.cookies_file)
+            if cookies_path.exists() and cookies_path.stat().st_size > 0:
+                logger.info(f"Loaded YouTube cookies from: {cookies_path.name}")
+                opts["cookiefile"] = str(cookies_path.resolve())
+            elif Path("cookies.txt").exists() and Path("cookies.txt").stat().st_size > 0:
+                logger.info("Loaded YouTube cookies from: cookies.txt")
+                opts["cookiefile"] = str(Path("cookies.txt").resolve())
 
         if progress_hook:
             opts["progress_hooks"] = [progress_hook]
@@ -98,10 +100,10 @@ class YtDownloader:
                 loop.call_soon_threadsafe(progress_callback, percent, speed)
 
         def _exec_download():
-            # Tier 1: Native solver (automatically picks 1080p/4K bestvideo+bestaudio)
+            # Tier 1: Try with cookies (if available) + mobile player client signatures
             opts_tier1 = self._get_ydl_opts(
                 raw_output_tmpl,
-                format_spec=None,
+                use_cookies=True,
                 progress_hook=_progress_hook
             )
             try:
@@ -110,11 +112,11 @@ class YtDownloader:
                     return ydl.sanitize_info(info)
             except Exception as e:
                 err_msg = str(e)
-                logger.warning(f"Tier 1 download failed ({err_msg}). Retrying with Tier 2 (b/best)...")
-                # Tier 2: Universal fallback (b/best)
+                logger.warning(f"Tier 1 download failed ({err_msg}). Retrying with Tier 2 (No-Cookies Mobile Client Fallback)...")
+                # Tier 2: Retry WITHOUT cookies using mobile player clients (bypasses invalid/flagged cookies)
                 opts_tier2 = self._get_ydl_opts(
                     raw_output_tmpl,
-                    format_spec="b/best",
+                    use_cookies=False,
                     progress_hook=_progress_hook
                 )
                 with yt_dlp.YoutubeDL(opts_tier2) as ydl:
