@@ -52,7 +52,7 @@ class YtDownloader:
             "concurrent_fragment_downloads": 5,
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["android", "mweb", "ios", "web"]
+                    "player_client": ["android", "ios", "mweb"]
                 }
             },
             "postprocessors": [
