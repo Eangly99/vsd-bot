@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Environment & Secret variables
+.env
+
+# Downloads directory
+downloads/
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# Logs
+*.log
+
+# Docker & IDE
+.vscode/
+.idea/
+.DS_Store

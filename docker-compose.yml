@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  vsd-bot:
+    build: .
+    container_name: vsd-bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./downloads:/app/downloads

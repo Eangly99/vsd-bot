@@ -1,0 +1,62 @@
+{
+    "_comment": "Pterodactyl Egg for High Quality Telegram Video Downloader Bot (vsd-bot)",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-08-08T12:00:00+00:00",
+    "name": "Telegram Video Downloader Bot",
+    "author": "eni@antigravity.ai",
+    "description": "High-performance Telegram bot that downloads videos from YouTube, TikTok, Instagram, Twitter/X, Reddit, etc. in OG high quality.",
+    "features": null,
+    "docker_images": {
+        "Python 3.11": "ghcr.io/parkervcp/yolks:python_3.11"
+    },
+    "file_denylist": [],
+    "startup": "if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi; python main.py",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Bot starting long polling...\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n# Pterodactyl installation script\ncd /mnt/server\nif [ -f requirements.txt ]; then\n  pip install -r requirements.txt\nfi\necho -e \"Installation finished!\"\n",
+            "container": "python:3.11-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Telegram Bot Token",
+            "description": "Bot Token obtained from @BotFather",
+            "env_variable": "BOT_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Max Concurrent Downloads",
+            "description": "Number of simultaneous video downloads allowed",
+            "env_variable": "MAX_CONCURRENT_DOWNLOADS",
+            "default_value": "3",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|min:1|max:10",
+            "field_type": "text"
+        },
+        {
+            "name": "Max File Size MB",
+            "description": "Maximum file download limit in Megabytes (Telegram standard bot upload limit is 2000 MB)",
+            "env_variable": "MAX_FILE_SIZE_MB",
+            "default_value": "2000",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric",
+            "field_type": "text"
+        }
+    ]
+}
