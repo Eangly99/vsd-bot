@@ -26,6 +26,9 @@ downloads/
 # Logs
 *.log
 
+# Deno binary (auto-downloaded)
+bin/
+
 # Docker & IDE
 .vscode/
 .idea/

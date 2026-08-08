@@ -8,6 +8,7 @@ import yt_dlp
 
 from config.settings import settings
 from services.ffmpeg_service import ffmpeg_service
+from services.deno_installer import get_deno_path, DENO_DIR, DENO_BINARY
 from utils.logger import logger
 from utils.helpers import cleanup_file
 
@@ -59,6 +60,11 @@ class YtDownloader:
                 }
             ]
         }
+
+        # Attach Deno JS engine for YouTube n-challenge solving
+        deno_bin = DENO_DIR / DENO_BINARY
+        if deno_bin.exists():
+            opts["js_runtimes"] = f"deno:{deno_bin.resolve()}"
 
         if format_spec:
             opts["format"] = format_spec

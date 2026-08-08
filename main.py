@@ -10,6 +10,7 @@ from config.settings import settings
 from utils.logger import logger
 from services.queue_manager import queue_manager
 from services.ffmpeg_service import ffmpeg_service
+from services.deno_installer import get_deno_path
 from bot.middlewares.throttling import ThrottlingMiddleware
 from bot.handlers import start_router, downloader_router
 
@@ -26,6 +27,13 @@ async def main():
     except Exception as e:
         logger.error(f"FFmpeg check failed: {e}")
         sys.exit(1)
+
+    # Initialize Deno JS engine for YouTube n-challenge solving
+    try:
+        deno_path = get_deno_path()
+        logger.info(f"Deno JS engine verified at: {deno_path}")
+    except Exception as e:
+        logger.warning(f"Deno JS engine setup failed: {e}. YouTube downloads may have limited format availability.")
 
     # Initialize Bot & Dispatcher
     try:
