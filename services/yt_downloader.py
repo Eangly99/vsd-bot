@@ -33,7 +33,7 @@ class YtDownloader:
     def _get_ydl_opts(
         self,
         output_template: str,
-        use_cookies: bool = True,
+        use_cookies: bool = False,
         player_clients: Optional[list] = None,
         format_spec: Optional[str] = None,
         progress_hook: Optional[Callable] = None
@@ -120,25 +120,25 @@ class YtDownloader:
         def _exec_download():
             tiers = [
                 {
-                    "name": "Tier 1 (Cookies + Native YouTube Extractor)",
-                    "use_cookies": True,
-                    "player_clients": None,
-                    "format_spec": None
-                },
-                {
-                    "name": "Tier 2 (Cookies + b/best Combined Fallback)",
-                    "use_cookies": True,
-                    "player_clients": None,
-                    "format_spec": "b/best"
-                },
-                {
-                    "name": "Tier 3 (No Cookies + Mobile/VR Clients [tv_embedded, android_vr, android])",
+                    "name": "Tier 1 (Android/iOS Mobile API - Datacenter Bypass)",
                     "use_cookies": False,
-                    "player_clients": ["tv_embedded", "android_vr", "android"],
+                    "player_clients": ["android", "ios"],
                     "format_spec": None
                 },
                 {
-                    "name": "Tier 4 (No Cookies + Default Extractor)",
+                    "name": "Tier 2 (Cookies + Native YouTube Extractor)",
+                    "use_cookies": True,
+                    "player_clients": None,
+                    "format_spec": None
+                },
+                {
+                    "name": "Tier 3 (TV/Embedded Mobile Fallback)",
+                    "use_cookies": False,
+                    "player_clients": ["tv_embedded", "android_vr"],
+                    "format_spec": None
+                },
+                {
+                    "name": "Tier 4 (Default Extractor)",
                     "use_cookies": False,
                     "player_clients": None,
                     "format_spec": "b/best"
