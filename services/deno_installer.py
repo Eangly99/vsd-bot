@@ -57,6 +57,9 @@ def get_deno_path() -> str:
     # 2. Check local binary
     local_deno = DENO_DIR / DENO_BINARY
     if local_deno.exists():
+        # Re-apply execute permission (Pterodactyl resets file perms on every boot)
+        if platform.system() != "Windows":
+            local_deno.chmod(local_deno.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
         logger.info(f"Deno found at: {local_deno.resolve()}")
         return str(local_deno.resolve())
 
