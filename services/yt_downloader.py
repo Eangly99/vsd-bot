@@ -35,7 +35,7 @@ class YtDownloader:
         ffmpeg_dir = str(Path(ffmpeg_bin).parent)
 
         opts = {
-            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+            "format": "bestvideo+bestaudio/best",
             "outtmpl": output_template,
             "merge_output_format": "mp4",
             "ffmpeg_location": ffmpeg_dir,
@@ -48,8 +48,7 @@ class YtDownloader:
             "concurrent_fragment_downloads": 5,
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["ios", "android", "mweb", "tv_embedded"],
-                    "player_skip": ["webpage", "configs"]
+                    "player_client": ["android", "ios", "mweb", "web"]
                 }
             },
             "postprocessors": [
