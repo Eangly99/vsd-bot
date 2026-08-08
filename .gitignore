@@ -29,6 +29,9 @@ downloads/
 # Deno binary (auto-downloaded)
 bin/
 
+# POT server (cloned at runtime)
+pot-server/
+
 # Docker & IDE
 .vscode/
 .idea/

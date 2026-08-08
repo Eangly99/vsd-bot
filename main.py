@@ -11,6 +11,7 @@ from utils.logger import logger
 from services.queue_manager import queue_manager
 from services.ffmpeg_service import ffmpeg_service
 from services.deno_installer import get_deno_path
+from services.pot_server import ensure_pot_server_running, stop_pot_server
 from bot.middlewares.throttling import ThrottlingMiddleware
 from bot.handlers import start_router, downloader_router
 
@@ -34,6 +35,13 @@ async def main():
         logger.info(f"Deno JS engine verified at: {deno_path}")
     except Exception as e:
         logger.warning(f"Deno JS engine setup failed: {e}. YouTube downloads may have limited format availability.")
+
+    # Start POT (Proof-of-Origin Token) server for YouTube bot-check bypass
+    pot_ok = await ensure_pot_server_running()
+    if pot_ok:
+        logger.info("YouTube POT server is running. Bot-check bypass active.")
+    else:
+        logger.warning("POT server not available. YouTube may block downloads from this server IP.")
 
     # Initialize Bot & Dispatcher
     try:
@@ -87,6 +95,7 @@ async def main():
         logger.error(f"❌ Telegram API Error: {e}")
     finally:
         logger.info("Shutting down bot...")
+        await stop_pot_server()
         await queue_manager.stop()
         await bot.session.close()
 

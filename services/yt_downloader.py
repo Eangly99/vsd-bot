@@ -69,12 +69,19 @@ class YtDownloader:
         if format_spec:
             opts["format"] = format_spec
 
+        # Build extractor_args for YouTube
+        yt_args = {}
         if player_clients:
-            opts["extractor_args"] = {
-                "youtube": {
-                    "player_client": player_clients
-                }
-            }
+            yt_args["player_client"] = player_clients
+
+        # Point bgutil POT plugin to our local server
+        pot_args = {"base_url": "http://127.0.0.1:4416"}
+
+        ext_args = opts.get("extractor_args", {})
+        if yt_args:
+            ext_args["youtube"] = {**ext_args.get("youtube", {}), **yt_args}
+        ext_args["youtubepot-bgutilhttp"] = pot_args
+        opts["extractor_args"] = ext_args
 
         # Check for cookies file if requested
         if use_cookies:
@@ -93,9 +100,11 @@ class YtDownloader:
 
         # OAuth2 support
         if settings.youtube_oauth2:
-            if "extractor_args" not in opts:
-                opts["extractor_args"] = {"youtube": {}}
-            opts["extractor_args"]["youtube"]["oauth2"] = True
+            ext_args = opts.get("extractor_args", {})
+            if "youtube" not in ext_args:
+                ext_args["youtube"] = {}
+            ext_args["youtube"]["oauth2"] = True
+            opts["extractor_args"] = ext_args
 
         if progress_hook:
             opts["progress_hooks"] = [progress_hook]
