@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     download_dir: str = Field(default="./downloads", description="Temporary directory for downloaded media")
     keep_temp_files: bool = Field(default=False, description="Debug mode: keep temp files after upload")
     ffmpeg_path: str = Field(default="auto", description="FFmpeg binary path or 'auto'")
+    cookies_file: str = Field(default="cookies.txt", description="Path to cookies.txt file for YouTube auth bypass")
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -46,6 +46,12 @@ class YtDownloader:
             "writesubtitles": False,
             "writethumbnail": True,
             "concurrent_fragment_downloads": 5,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["ios", "android", "mweb", "tv_embedded"],
+                    "player_skip": ["webpage", "configs"]
+                }
+            },
             "postprocessors": [
                 {
                     "key": "FFmpegVideoConvertor",
@@ -53,6 +59,15 @@ class YtDownloader:
                 }
             ]
         }
+
+        # Check for cookies file to bypass bot verification on datacenter IPs
+        cookies_path = Path(settings.cookies_file)
+        if cookies_path.exists() and cookies_path.stat().st_size > 0:
+            logger.info(f"Loaded YouTube cookies from: {cookies_path.name}")
+            opts["cookiefile"] = str(cookies_path.resolve())
+        elif Path("cookies.txt").exists() and Path("cookies.txt").stat().st_size > 0:
+            logger.info("Loaded YouTube cookies from: cookies.txt")
+            opts["cookiefile"] = str(Path("cookies.txt").resolve())
 
         if progress_hook:
             opts["progress_hooks"] = [progress_hook]
