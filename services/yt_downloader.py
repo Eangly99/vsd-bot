@@ -35,14 +35,11 @@ class YtDownloader:
         output_template: str,
         use_cookies: bool = True,
         player_clients: Optional[list] = None,
+        format_spec: Optional[str] = None,
         progress_hook: Optional[Callable] = None
     ) -> Dict[str, Any]:
         ffmpeg_bin = ffmpeg_service.get_ffmpeg_path()
         ffmpeg_dir = str(Path(ffmpeg_bin).parent)
-
-        if player_clients is None:
-            # Optimal default clients for cloud/datacenter IPs
-            player_clients = ["tv_embedded", "android_vr", "android", "ios", "mweb"]
 
         opts: Dict[str, Any] = {
             "outtmpl": output_template,
@@ -55,11 +52,6 @@ class YtDownloader:
             "writesubtitles": False,
             "writethumbnail": True,
             "concurrent_fragment_downloads": 5,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": player_clients
-                }
-            },
             "postprocessors": [
                 {
                     "key": "FFmpegVideoConvertor",
@@ -67,6 +59,16 @@ class YtDownloader:
                 }
             ]
         }
+
+        if format_spec:
+            opts["format"] = format_spec
+
+        if player_clients:
+            opts["extractor_args"] = {
+                "youtube": {
+                    "player_client": player_clients
+                }
+            }
 
         # Check for cookies file if requested
         if use_cookies:
@@ -85,6 +87,8 @@ class YtDownloader:
 
         # OAuth2 support
         if settings.youtube_oauth2:
+            if "extractor_args" not in opts:
+                opts["extractor_args"] = {"youtube": {}}
             opts["extractor_args"]["youtube"]["oauth2"] = True
 
         if progress_hook:
@@ -114,27 +118,30 @@ class YtDownloader:
                 loop.call_soon_threadsafe(progress_callback, percent, speed)
 
         def _exec_download():
-            # Define fallback execution tiers tailored for datacenter & cloud hosting environments
             tiers = [
                 {
-                    "name": "Tier 1 (Cookies + Multi-Client [tv_embedded, android_vr, android, ios, mweb])",
+                    "name": "Tier 1 (Cookies + Native YouTube Extractor)",
                     "use_cookies": True,
-                    "player_clients": ["tv_embedded", "android_vr", "android", "ios", "mweb"]
+                    "player_clients": None,
+                    "format_spec": None
                 },
                 {
-                    "name": "Tier 2 (No Cookies + Multi-Client [tv_embedded, android_vr, android, ios, mweb])",
-                    "use_cookies": False,
-                    "player_clients": ["tv_embedded", "android_vr", "android", "ios", "mweb"]
+                    "name": "Tier 2 (Cookies + b/best Combined Fallback)",
+                    "use_cookies": True,
+                    "player_clients": None,
+                    "format_spec": "b/best"
                 },
                 {
-                    "name": "Tier 3 (No Cookies + Embedded/VR Specialized [tv_embedded, android_vr])",
+                    "name": "Tier 3 (No Cookies + Mobile/VR Clients [tv_embedded, android_vr, android])",
                     "use_cookies": False,
-                    "player_clients": ["tv_embedded", "android_vr"]
+                    "player_clients": ["tv_embedded", "android_vr", "android"],
+                    "format_spec": None
                 },
                 {
-                    "name": "Tier 4 (No Cookies + Standard Default yt-dlp Extractor)",
+                    "name": "Tier 4 (No Cookies + Default Extractor)",
                     "use_cookies": False,
-                    "player_clients": None
+                    "player_clients": None,
+                    "format_spec": "b/best"
                 }
             ]
 
@@ -146,6 +153,7 @@ class YtDownloader:
                     raw_output_tmpl,
                     use_cookies=tier["use_cookies"],
                     player_clients=tier["player_clients"],
+                    format_spec=tier["format_spec"],
                     progress_hook=_progress_hook
                 )
                 try:
