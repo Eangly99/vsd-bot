@@ -33,15 +33,13 @@ class YtDownloader:
     def _get_ydl_opts(
         self,
         output_template: str,
-        format_spec: str = "bv*+ba/b/best",
-        progress_hook: Optional[Callable] = None,
-        use_extractor_args: bool = True
+        format_spec: Optional[str] = None,
+        progress_hook: Optional[Callable] = None
     ) -> Dict[str, Any]:
         ffmpeg_bin = ffmpeg_service.get_ffmpeg_path()
         ffmpeg_dir = str(Path(ffmpeg_bin).parent)
 
-        opts = {
-            "format": format_spec,
+        opts: Dict[str, Any] = {
             "outtmpl": output_template,
             "merge_output_format": "mp4",
             "ffmpeg_location": ffmpeg_dir,
@@ -60,12 +58,9 @@ class YtDownloader:
             ]
         }
 
-        if use_extractor_args:
-            opts["extractor_args"] = {
-                "youtube": {
-                    "player_client": ["android", "ios", "mweb", "web"]
-                }
-            }
+        # If a specific format string is requested, set it; otherwise yt-dlp uses its native best solver
+        if format_spec:
+            opts["format"] = format_spec
 
         # Check for cookies file to bypass bot verification on datacenter IPs
         cookies_path = Path(settings.cookies_file)
@@ -103,12 +98,11 @@ class YtDownloader:
                 loop.call_soon_threadsafe(progress_callback, percent, speed)
 
         def _exec_download():
-            # Tier 1: Try optimal separate video+audio streams with client args
+            # Tier 1: Native solver (automatically picks 1080p/4K bestvideo+bestaudio)
             opts_tier1 = self._get_ydl_opts(
                 raw_output_tmpl,
-                format_spec="bv*+ba/b/best",
-                progress_hook=_progress_hook,
-                use_extractor_args=True
+                format_spec=None,
+                progress_hook=_progress_hook
             )
             try:
                 with yt_dlp.YoutubeDL(opts_tier1) as ydl:
@@ -116,19 +110,16 @@ class YtDownloader:
                     return ydl.sanitize_info(info)
             except Exception as e:
                 err_msg = str(e)
-                if "Requested format is not available" in err_msg or "format" in err_msg.lower():
-                    logger.warning(f"Tier 1 format failed ({err_msg}). Retrying with Tier 2 universal fallback...")
-                    # Tier 2: Universal fallback (b/best/bv*+ba) without extractor restrictions
-                    opts_tier2 = self._get_ydl_opts(
-                        raw_output_tmpl,
-                        format_spec="b/best/bv*+ba",
-                        progress_hook=_progress_hook,
-                        use_extractor_args=False
-                    )
-                    with yt_dlp.YoutubeDL(opts_tier2) as ydl:
-                        info = ydl.extract_info(url, download=True)
-                        return ydl.sanitize_info(info)
-                raise e
+                logger.warning(f"Tier 1 download failed ({err_msg}). Retrying with Tier 2 (b/best)...")
+                # Tier 2: Universal fallback (b/best)
+                opts_tier2 = self._get_ydl_opts(
+                    raw_output_tmpl,
+                    format_spec="b/best",
+                    progress_hook=_progress_hook
+                )
+                with yt_dlp.YoutubeDL(opts_tier2) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    return ydl.sanitize_info(info)
 
         logger.info(f"Starting download for URL: {url}")
         info_dict = await asyncio.to_thread(_exec_download)
