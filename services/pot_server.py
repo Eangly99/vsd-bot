@@ -19,7 +19,7 @@ import shutil
 from pathlib import Path
 
 from utils.logger import logger
-from services.deno_installer import get_deno_path, DENO_DIR, DENO_BINARY
+from services.deno_installer import get_deno_command
 
 POT_SERVER_DIR = Path("./pot-server")
 POT_REPO_URL = "https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git"
@@ -37,16 +37,12 @@ async def setup_pot_server() -> bool:
         logger.info("POT server source already present.")
         return True
 
-    # Resolve deno binary
-    deno_bin = DENO_DIR / DENO_BINARY
-    if not deno_bin.exists():
-        try:
-            get_deno_path()
-        except Exception as e:
-            logger.error(f"Cannot set up POT server without Deno: {e}")
-            return False
-
-    deno_path = str(deno_bin.resolve())
+    # Resolve deno command (handles ld-linux fallback on Pterodactyl)
+    try:
+        deno_cmd = get_deno_command()
+    except Exception as e:
+        logger.error(f"Cannot set up POT server without Deno: {e}")
+        return False
 
     # Clone repo
     if not POT_SERVER_DIR.exists():
@@ -71,7 +67,7 @@ async def setup_pot_server() -> bool:
     logger.info("Installing POT server Deno dependencies...")
     try:
         proc = await asyncio.create_subprocess_exec(
-            deno_path, "install", "--allow-scripts=npm:canvas", "--frozen",
+            *deno_cmd, "install", "--allow-scripts=npm:canvas", "--frozen",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=str(server_dir)
@@ -97,17 +93,17 @@ async def start_pot_server() -> bool:
         return True
 
     server_dir = POT_SERVER_DIR / "server"
-    deno_bin = DENO_DIR / DENO_BINARY
-
-    if not deno_bin.exists():
-        logger.error("Deno binary not found. Cannot start POT server.")
-        return False
 
     if not server_dir.exists():
         logger.error("POT server source not found. Run setup_pot_server() first.")
         return False
 
-    deno_path = str(deno_bin.resolve())
+    try:
+        deno_cmd = get_deno_command()
+    except Exception as e:
+        logger.error(f"Cannot start POT server without Deno command: {e}")
+        return False
+
     main_ts = server_dir / "src" / "main.ts"
 
     if not main_ts.exists():
@@ -121,7 +117,7 @@ async def start_pot_server() -> bool:
         env["PORT"] = str(POT_SERVER_PORT)
 
         _pot_process = await asyncio.create_subprocess_exec(
-            deno_path, "run", "-A", str(main_ts),
+            *deno_cmd, "run", "-A", str(main_ts),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=str(server_dir),
