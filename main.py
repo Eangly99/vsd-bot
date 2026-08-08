@@ -3,6 +3,7 @@ import sys
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.utils.token import TokenValidationError
 
 from config.settings import settings
 from utils.logger import logger
@@ -26,10 +27,23 @@ async def main():
         sys.exit(1)
 
     # Initialize Bot & Dispatcher
-    bot = Bot(
-        token=settings.bot_token,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-    )
+    try:
+        bot = Bot(
+            token=settings.bot_token,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        )
+    except TokenValidationError:
+        logger.error(
+            "❌ INVALID TELEGRAM BOT TOKEN!\n"
+            "Please set a valid Telegram Bot Token from @BotFather.\n"
+            "• On Pterodactyl Panel: Go to Startup / Startup Parameters -> BOT_TOKEN variable.\n"
+            "• On VPS / Local: Edit your .env file and set BOT_TOKEN=your_token_here"
+        )
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Failed to initialize Telegram Bot: {e}")
+        sys.exit(1)
+
     dp = Dispatcher()
 
     # Register Middlewares
