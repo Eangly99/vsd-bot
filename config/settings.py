@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     keep_temp_files: bool = Field(default=False, description="Debug mode: keep temp files after upload")
     ffmpeg_path: str = Field(default="auto", description="FFmpeg binary path or 'auto'")
     cookies_file: str = Field(default="cookies.txt", description="Path to cookies.txt file for YouTube auth bypass")
+    youtube_oauth2: bool = Field(default=False, description="Enable YouTube OAuth2 device code login")
+    youtube_proxy: str = Field(default="", description="Optional HTTP/SOCKS5 proxy for YouTube downloads")
 
     model_config = SettingsConfigDict(
         env_file=".env",

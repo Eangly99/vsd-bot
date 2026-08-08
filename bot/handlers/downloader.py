@@ -99,13 +99,25 @@ async def process_download_job(bot: Bot, status_msg: Message, task_id: str, user
 
     except Exception as e:
         logger.error(f"Error processing video download for {url}: {e}")
+        err_str = str(e)
         try:
-            await status_msg.edit_text(
-                f"❌ <b>Download Failed!</b>\n\n"
-                f"Error: <code>{html.escape(str(e)[:300])}</code>\n\n"
-                f"<i>Please verify the link is public and accessible.</i>",
-                parse_mode="HTML"
-            )
+            if "Sign in to confirm" in err_str or "cookies" in err_str.lower():
+                user_err = (
+                    "⚠️ <b>YouTube Server IP Authentication Required!</b>\n\n"
+                    "Google has flagged this hosting server's IP address and requires YouTube account cookies.\n\n"
+                    "💡 <b>To fix this on Pterodactyl Panel:</b>\n"
+                    "1. Log into YouTube in your desktop browser.\n"
+                    "2. Use the Chrome extension <b>'Get cookies.txt LOCALLY'</b> to export your cookies.\n"
+                    "3. Upload the <code>cookies.txt</code> file to your Pterodactyl server root folder.\n"
+                    "4. Click <b>Restart</b> on your server console!"
+                )
+            else:
+                user_err = (
+                    f"❌ <b>Download Failed!</b>\n\n"
+                    f"Error: <code>{html.escape(err_str[:300])}</code>\n\n"
+                    f"<i>Please verify the link is public and accessible.</i>"
+                )
+            await status_msg.edit_text(user_err, parse_mode="HTML")
         except Exception:
             pass
     finally:

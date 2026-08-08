@@ -78,6 +78,15 @@ class YtDownloader:
                 logger.info("Loaded YouTube cookies from: cookies.txt")
                 opts["cookiefile"] = str(Path("cookies.txt").resolve())
 
+        # Proxy support for datacenter IP bypass
+        if settings.youtube_proxy:
+            logger.info(f"Using YouTube Proxy: {settings.youtube_proxy}")
+            opts["proxy"] = settings.youtube_proxy
+
+        # OAuth2 support
+        if settings.youtube_oauth2:
+            opts["extractor_args"]["youtube"]["oauth2"] = True
+
         if progress_hook:
             opts["progress_hooks"] = [progress_hook]
 
