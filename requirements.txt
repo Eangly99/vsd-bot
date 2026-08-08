@@ -6,3 +6,4 @@ Pillow>=10.2.0
 python-dotenv>=1.0.1
 loguru>=0.7.2
 imageio-ffmpeg>=0.4.9
+dukpy>=0.6.0

@@ -120,25 +120,25 @@ class YtDownloader:
         def _exec_download():
             tiers = [
                 {
-                    "name": "Tier 1 (Android/iOS Mobile API - Datacenter Bypass)",
-                    "use_cookies": False,
-                    "player_clients": ["android", "ios"],
-                    "format_spec": None
-                },
-                {
-                    "name": "Tier 2 (Cookies + Native YouTube Extractor)",
+                    "name": "Tier 1 (Cookies + Native Extractor [1080p Full HD])",
                     "use_cookies": True,
                     "player_clients": None,
-                    "format_spec": None
+                    "format_spec": "bv*+ba/b/best"
                 },
                 {
-                    "name": "Tier 3 (TV/Embedded Mobile Fallback)",
+                    "name": "Tier 2 (Cookies + Pre-Merged Stream Fallback)",
+                    "use_cookies": True,
+                    "player_clients": None,
+                    "format_spec": "b/best"
+                },
+                {
+                    "name": "Tier 3 (No Cookies + Mobile API [android, ios])",
                     "use_cookies": False,
-                    "player_clients": ["tv_embedded", "android_vr"],
-                    "format_spec": None
+                    "player_clients": ["android", "ios"],
+                    "format_spec": "b/best/bv*+ba"
                 },
                 {
-                    "name": "Tier 4 (Default Extractor)",
+                    "name": "Tier 4 (No Cookies + Default Extractor)",
                     "use_cookies": False,
                     "player_clients": None,
                     "format_spec": "b/best"
