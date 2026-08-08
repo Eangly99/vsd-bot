@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.utils.token import TokenValidationError
+from aiogram.exceptions import TelegramUnauthorizedError, TelegramAPIError
 
 from config.settings import settings
 from utils.logger import logger
@@ -61,6 +62,21 @@ async def main():
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
+    except TelegramUnauthorizedError:
+        logger.error(
+            "\n"
+            "===============================================================\n"
+            "❌ TELEGRAM BOT TOKEN UNAUTHORIZED (HTTP 401)!\n"
+            "Telegram's servers rejected the BOT_TOKEN provided.\n\n"
+            "💡 How to fix in Pterodactyl Panel:\n"
+            "1. Go to Pterodactyl Panel -> Startup -> BOT_TOKEN.\n"
+            "2. Ensure you pasted a valid active token from @BotFather.\n"
+            "3. Ensure there are NO surrounding quotes or spaces.\n"
+            "4. If the token was revoked, message @BotFather to get a new token.\n"
+            "===============================================================\n"
+        )
+    except TelegramAPIError as e:
+        logger.error(f"❌ Telegram API Error: {e}")
     finally:
         logger.info("Shutting down bot...")
         await queue_manager.stop()
